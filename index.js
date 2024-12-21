@@ -34,7 +34,20 @@ async function run() {
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
 
-  
+    // popular services
+    app.get('/popular-services',async(req,res)=>{
+        try {
+            const result = await servicesCollection.find().limit(6).toArray();
+            res.send(result);
+        }catch(err){
+            res.status(500).send('Something went wrong when fetch popular services');
+        }
+    });
+
+ 
+
+
+
 
 
 
