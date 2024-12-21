@@ -61,7 +61,19 @@ async function run() {
         }
     })
 
-   
+    // get single service details
+    app.get('/services/:id',async(req,res)=>{
+        try{
+            const id = req.params.id;
+            const query = {_id: new ObjectId(id)};
+            const result = await servicesCollection.findOne(query);
+            res.send(result);
+        }catch(err){
+            res.status(500).send('Something went wrong when fetch single service');
+        }
+    })
+
+
 
 
 
