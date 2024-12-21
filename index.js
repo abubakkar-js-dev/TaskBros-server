@@ -91,7 +91,31 @@ async function run() {
         }
     })
 
+    // update service
 
+    app.patch('/update-service/:id',async(req,res)=>{
+        try{
+            const id = req.params.id;
+            const updatedService = req.body;
+            const query = {_id: new ObjectId(id)};
+            const updateDoc = {
+                $set: {
+                    serviceImage: updatedService.serviceImage,
+                    serviceName: updatedService.serviceName,
+                    serviceDescription: updatedService.serviceDescription,
+                    serviceProvider: updatedService.serviceProvider,
+                    serviceArea: updatedService.serviceArea,
+                    servicePrice: updatedService.servicePrice,
+                },
+            };
+            const result = await servicesCollection.updateOne(query,updateDoc,{upsert:true});
+            res.send(result);
+        }catch(err){
+            res.status(500).send('Something went wrong when updating service');
+        }
+    })
+
+ 
 
 
 
