@@ -73,7 +73,23 @@ async function run() {
         }
     })
 
+    // add a service
+    app.post('/add-service',async(req,res)=>{
+        const newService = req.body;
+        const result = await servicesCollection.insertOne(newService);
+        res.send(result);
+    });
 
+    // book a service
+    app.post('/book-service',async(req,res)=>{
+        try{
+            const newBooking = req.body;
+            const result = await bookingCollection.insertOne(newBooking);
+            res.send(result);
+        }catch(err){
+            res.status(500).send('Something went wrong when booking a service');
+        }
+    })
 
 
 
