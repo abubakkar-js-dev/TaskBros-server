@@ -111,11 +111,22 @@ async function run() {
             const result = await servicesCollection.updateOne(query,updateDoc,{upsert:true});
             res.send(result);
         }catch(err){
-            res.status(500).send('Something went wrong when updating service');
+            res.status(500).send('Something went wrong when updating a service');
         }
     })
 
- 
+    // delete a service
+    app.delete('/delete-service/:id',async(req,res)=>{
+        try{
+            const id = req.params.id;
+            const query = {_id: new ObjectId(id)};
+            const result = await servicesCollection.deleteOne(query);
+            res.send(result);
+        }catch(err){
+            res.status(500).send('Something went wrong when deleting a service');
+        }
+    })
+
 
 
 
