@@ -44,7 +44,25 @@ async function run() {
         }
     });
 
- 
+    // get all services
+    app.get('/all-services',async(req,res)=>{
+        try{
+            const search = req.query.search || '';
+            let searchquery;
+            if(search){
+                searchquery = {serviceName:{$regex:search,$options:'i'}};
+            }else{
+                searchquery = {};
+            }
+            const result = await servicesCollection.find(searchquery).toArray();
+            res.send(result);
+        } catch(err){
+            res.status(500).send('Something went wrong when fetch all services');
+        }
+    })
+
+   
+
 
 
 
