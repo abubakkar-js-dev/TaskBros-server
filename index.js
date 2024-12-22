@@ -2,12 +2,32 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion,ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
+const cokkieParser = require("cookie-parser");
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
 app.use(cors());
 app.use(express.json());
+
+
+// custom middleware for jwt verification
+const verifyToken = (req,res,next)=>{
+    const token = req.cookies.token;
+    if(!token){
+        return res.status(401).send('Unauthorized user');
+    }
+
+    jwt.verify(token,process.env.JWT_SECRET_KEY,(err,decoded)=>{
+        if(err){
+            return res.status(401).send('Unauthorized user');
+        }
+        req.user = decoded;
+
+    })
+    next();
+}
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.y24v7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -20,9 +40,7 @@ const client = new MongoClient(uri, {
   },
 });
 
-const taskBrosDb = client.db("taskBros");
-const servicesCollection = taskBrosDb.collection("services");
-const bookingCollection = taskBrosDb.collection("bookings");
+
 
 async function run() {
   try {
@@ -34,7 +52,23 @@ async function run() {
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
 
-    // popular services
+    const taskBrosDb = client.db("taskBros");
+    const servicesCollection = taskBrosDb.collection("services");
+    const bookingCollection = taskBrosDb.collection("bookings");
+
+
+    // jwt authentication
+    app.post('/login',async(req,res)=>{
+        const user = req.body;
+        const token = jwt.sign(user,process.env.JWT_SECRET_KEY,{expiresIn:'1d'});
+        res.cookie('token',token,{
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none': 'strict',
+        })
+    })
+
+    // popular services api
     app.get('/popular-services',async(req,res)=>{
         try {
             const result = await servicesCollection.find().limit(6).toArray();
