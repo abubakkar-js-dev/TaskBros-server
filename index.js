@@ -29,7 +29,9 @@ const verifyToken = (req,res,next)=>{
     next();
 }
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.y24v7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.y24v7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+
+const uri = "mongodb://localhost:27017/";
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -96,7 +98,7 @@ async function run() {
     })
 
     // get single service details
-    app.get('/services/:id',async(req,res)=>{
+    app.get('/all-services/:id',async(req,res)=>{
         try{
             const id = req.params.id;
             const query = {_id: new ObjectId(id)};
@@ -104,6 +106,20 @@ async function run() {
             res.send(result);
         }catch(err){
             res.status(500).send('Something went wrong when fetch single service');
+        }
+    })
+
+    // get my services by email
+
+    app.get('/my-services/:email',async(req,res)=>{
+        try{
+            const email = req.params.email;
+            const query = {provider_email: email};
+            const result = await servicesCollection.find(query).toArray();
+    
+            res.send(result);
+        }catch{
+            res.status(500).send('Something went wrong when fetch my services')
         }
     })
 
