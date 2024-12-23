@@ -150,12 +150,11 @@ async function run() {
             const query = {_id: new ObjectId(id)};
             const updateDoc = {
                 $set: {
-                    serviceImage: updatedService.serviceImage,
-                    serviceName: updatedService.serviceName,
-                    serviceDescription: updatedService.serviceDescription,
-                    serviceProvider: updatedService.serviceProvider,
-                    serviceArea: updatedService.serviceArea,
-                    servicePrice: updatedService.servicePrice,
+                    description: updatedService.description,
+                    imageUrl: updatedService.imageUrl,
+                    name: updatedService.name,
+                    price: updatedService.price,
+                    area: updatedService.area,
                 },
             };
             const result = await servicesCollection.updateOne(query,updateDoc,{upsert:true});
