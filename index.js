@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion,ObjectId } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const cokkieParser = require("cookie-parser");
 const app = express();
@@ -11,23 +11,21 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-
 // custom middleware for jwt verification
-const verifyToken = (req,res,next)=>{
-    const token = req.cookies.token;
-    if(!token){
-        return res.status(401).send('Unauthorized user');
+const verifyToken = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).send("Unauthorized user");
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(401).send("Unauthorized user");
     }
-
-    jwt.verify(token,process.env.JWT_SECRET_KEY,(err,decoded)=>{
-        if(err){
-            return res.status(401).send('Unauthorized user');
-        }
-        req.user = decoded;
-
-    })
-    next();
-}
+    req.user = decoded;
+  });
+  next();
+};
 
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.y24v7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -41,8 +39,6 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
-
-
 
 async function run() {
   try {
@@ -58,129 +54,142 @@ async function run() {
     const servicesCollection = taskBrosDb.collection("services");
     const bookingCollection = taskBrosDb.collection("bookings");
 
-
     // jwt authentication
-    app.post('/login',async(req,res)=>{
-        const user = req.body;
-        const token = jwt.sign(user,process.env.JWT_SECRET_KEY,{expiresIn:'1d'});
-        res.cookie('token',token,{
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none': 'strict',
-        })
-    })
+    app.post("/login", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_SECRET_KEY, {
+        expiresIn: "1d",
+      });
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      });
+    });
 
     // popular services api
-    app.get('/popular-services',async(req,res)=>{
-        try {
-            const result = await servicesCollection.find().limit(6).toArray();
-            res.send(result);
-        }catch(err){
-            res.status(500).send('Something went wrong when fetch popular services');
-        }
+    app.get("/popular-services", async (req, res) => {
+      try {
+        const result = await servicesCollection.find().limit(6).toArray();
+        res.send(result);
+      } catch (err) {
+        res
+          .status(500)
+          .send("Something went wrong when fetch popular services");
+      }
     });
 
     // get all services
-    app.get('/all-services',async(req,res)=>{
-        try{
-            const search = req.query.search || '';
-            let searchquery;
-            if(search){
-                searchquery = {serviceName:{$regex:search,$options:'i'}};
-            }else{
-                searchquery = {};
-            }
-            const result = await servicesCollection.find(searchquery).toArray();
-            res.send(result);
-        } catch(err){
-            res.status(500).send('Something went wrong when fetch all services');
+    app.get("/all-services", async (req, res) => {
+      try {
+        const search = req.query.search || "";
+        let searchquery;
+        if (search) {
+          searchquery = { serviceName: { $regex: search, $options: "i" } };
+        } else {
+          searchquery = {};
         }
-    })
+        const result = await servicesCollection.find(searchquery).toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(500).send("Something went wrong when fetch all services");
+      }
+    });
 
     // get single service details
-    app.get('/all-services/:id',async(req,res)=>{
-        try{
-            const id = req.params.id;
-            const query = {_id: new ObjectId(id)};
-            const result = await servicesCollection.findOne(query);
-            res.send(result);
-        }catch(err){
-            res.status(500).send('Something went wrong when fetch single service');
-        }
-    })
+    app.get("/all-services/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await servicesCollection.findOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send("Something went wrong when fetch single service");
+      }
+    });
 
     // get my services by email
 
-    app.get('/my-services/:email',async(req,res)=>{
+    app.get("/my-services/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const query = { provider_email: email };
+        const result = await servicesCollection.find(query).toArray();
+
+        res.send(result);
+      } catch {
+        res.status(500).send("Something went wrong when fetch my services");
+      }
+    });
+
+    // get booked services
+    app.get('/booked-services',(async(req,res)=>{
         try{
-            const email = req.params.email;
-            const query = {provider_email: email};
-            const result = await servicesCollection.find(query).toArray();
+            const email = req.query.email;
+            const filter = {"bookingInfo.booking_person_email":email};
+            const cursor = bookingCollection.find(filter);
+            const result = await cursor.toArray();
     
             res.send(result);
         }catch{
-            res.status(500).send('Something went wrong when fetch my services')
+            res.status(500).send("Something went wrong when fetch booked services");
         }
-    })
+    }))
 
     // add a service
-    app.post('/add-service',async(req,res)=>{
-        const newService = req.body;
-        const result = await servicesCollection.insertOne(newService);
-        res.send(result);
+    app.post("/add-service", async (req, res) => {
+      const newService = req.body;
+      const result = await servicesCollection.insertOne(newService);
+      res.send(result);
     });
 
     // book a service
-    app.post('/book-service',async(req,res)=>{
-        try{
-            const newBooking = req.body;
-            const result = await bookingCollection.insertOne(newBooking);
-            res.send(result);
-        }catch(err){
-            res.status(500).send('Something went wrong when booking a service');
-        }
-    })
+    app.post("/book-service", async (req, res) => {
+      try {
+        const newBooking = req.body;
+        const result = await bookingCollection.insertOne(newBooking);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send("Something went wrong when booking a service");
+      }
+    });
 
     // update service
 
-    app.patch('/update-service/:id',async(req,res)=>{
-        try{
-            const id = req.params.id;
-            const updatedService = req.body;
-            const query = {_id: new ObjectId(id)};
-            const updateDoc = {
-                $set: {
-                    description: updatedService.description,
-                    imageUrl: updatedService.imageUrl,
-                    name: updatedService.name,
-                    price: updatedService.price,
-                    area: updatedService.area,
-                },
-            };
-            const result = await servicesCollection.updateOne(query,updateDoc,{upsert:true});
-            res.send(result);
-        }catch(err){
-            res.status(500).send('Something went wrong when updating a service');
-        }
-    })
+    app.patch("/update-service/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const updatedService = req.body;
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            description: updatedService.description,
+            imageUrl: updatedService.imageUrl,
+            name: updatedService.name,
+            price: updatedService.price,
+            area: updatedService.area,
+          },
+        };
+        const result = await servicesCollection.updateOne(query, updateDoc, {
+          upsert: true,
+        });
+        res.send(result);
+      } catch (err) {
+        res.status(500).send("Something went wrong when updating a service");
+      }
+    });
 
     // delete a service
-    app.delete('/delete-service/:id',async(req,res)=>{
-        try{
-            const id = req.params.id;
-            const query = {_id: new ObjectId(id)};
-            const result = await servicesCollection.deleteOne(query);
-            res.send(result);
-        }catch(err){
-            res.status(500).send('Something went wrong when deleting a service');
-        }
-    })
-
-
-
-
-
-
+    app.delete("/delete-service/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await servicesCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send("Something went wrong when deleting a service");
+      }
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
