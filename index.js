@@ -123,24 +123,42 @@ async function run() {
     });
 
     // get booked services
-    app.get('/booked-services',(async(req,res)=>{
-        try{
-            const email = req.query.email;
-            const filter = {"bookingInfo.booking_person_email":email};
-            const cursor = bookingCollection.find(filter);
-            const result = await cursor.toArray();
-    
-            res.send(result);
-        }catch{
-            res.status(500).send("Something went wrong when fetch booked services");
-        }
-    }))
+    app.get("/booked-services", async (req, res) => {
+      try {
+        const email = req.query.email;
+        const filter = { "bookingInfo.booking_person_email": email };
+        const cursor = bookingCollection.find(filter);
+        const result = await cursor.toArray();
+
+        res.send(result);
+      } catch {
+        res.status(500).send("Something went wrong when fetch booked services");
+      }
+    });
+
+    // booked in my services
+    app.get("/booked-by-user", async (req, res) => {
+      try{
+        const email = req.query.email;
+        const filter = {
+          service_provider_email: email,
+        };
+        const result = await bookingCollection.find(filter).toArray();
+        res.send(result);
+      }catch{
+        res.status(500).send("Something Went wrong when fetch booked by user data");
+      }
+    });
 
     // add a service
     app.post("/add-service", async (req, res) => {
-      const newService = req.body;
-      const result = await servicesCollection.insertOne(newService);
-      res.send(result);
+        try{
+          const newService = req.body;
+          const result = await servicesCollection.insertOne(newService);
+          res.send(result);
+        }catch{
+          res.status(500).send("Something went wrong when add service");
+        }
     });
 
     // book a service
@@ -170,9 +188,7 @@ async function run() {
             area: updatedService.area,
           },
         };
-        const result = await servicesCollection.updateOne(query, updateDoc, {
-          upsert: true,
-        });
+        const result = await servicesCollection.updateOne(query, updateDoc);
         res.send(result);
       } catch (err) {
         res.status(500).send("Something went wrong when updating a service");
@@ -190,6 +206,11 @@ async function run() {
         res.status(500).send("Something went wrong when deleting a service");
       }
     });
+
+    // update booking status
+    
+
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
