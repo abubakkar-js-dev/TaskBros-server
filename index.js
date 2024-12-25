@@ -3,17 +3,28 @@ const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
-const cokkieParser = require("cookie-parser");
+const cookieParser = require("cookie-parser");
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+       
+    ], 
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 // custom middleware for jwt verification
 const verifyToken = (req, res, next) => {
-  const token = req.cookies.token;
+  console.log(req.cookies);
+  const token = req.cookies?.token;
+  console.log(token);
   if (!token) {
     return res.status(401).send("Unauthorized user");
   }
@@ -23,8 +34,8 @@ const verifyToken = (req, res, next) => {
       return res.status(401).send("Unauthorized user");
     }
     req.user = decoded;
+    next();
   });
-  next();
 };
 
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.y24v7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -55,16 +66,28 @@ async function run() {
     const bookingCollection = taskBrosDb.collection("bookings");
 
     // jwt authentication
-    app.post("/login", async (req, res) => {
+    app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.JWT_SECRET_KEY, {
         expiresIn: "1d",
       });
+
       res.cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-      });
+      })
+      .send({success: true});
+    });
+
+    app.post("/logOut", (req, res) => {
+      //clear the cookies
+      res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      })
+      .send({success: true});
     });
 
     // popular services api
@@ -82,10 +105,10 @@ async function run() {
     // get all services
     app.get("/all-services", async (req, res) => {
       try {
-        const search = req.query.search || "";
+        const search = req.query.search;
         let searchquery;
         if (search) {
-          searchquery = { serviceName: { $regex: search, $options: "i" } };
+          searchquery = { name: { $regex: search, $options: "i" } };
         } else {
           searchquery = {};
         }
@@ -97,7 +120,7 @@ async function run() {
     });
 
     // get single service details
-    app.get("/all-services/:id", async (req, res) => {
+    app.get("/all-services/:id",verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
@@ -110,7 +133,7 @@ async function run() {
 
     // get my services by email
 
-    app.get("/my-services/:email", async (req, res) => {
+    app.get("/my-services/:email",verifyToken, async (req, res) => {
       try {
         const email = req.params.email;
         const query = { provider_email: email };
@@ -123,7 +146,7 @@ async function run() {
     });
 
     // get booked services
-    app.get("/booked-services", async (req, res) => {
+    app.get("/booked-services",verifyToken, async (req, res) => {
       try {
         const email = req.query.email;
         const filter = { "bookingInfo.booking_person_email": email };
@@ -137,28 +160,30 @@ async function run() {
     });
 
     // booked in my services
-    app.get("/booked-by-user", async (req, res) => {
-      try{
+    app.get("/booked-by-user",verifyToken, async (req, res) => {
+      try {
         const email = req.query.email;
         const filter = {
           service_provider_email: email,
         };
         const result = await bookingCollection.find(filter).toArray();
         res.send(result);
-      }catch{
-        res.status(500).send("Something Went wrong when fetch booked by user data");
+      } catch {
+        res
+          .status(500)
+          .send("Something Went wrong when fetch booked by user data");
       }
     });
 
     // add a service
-    app.post("/add-service", async (req, res) => {
-        try{
-          const newService = req.body;
-          const result = await servicesCollection.insertOne(newService);
-          res.send(result);
-        }catch{
-          res.status(500).send("Something went wrong when add service");
-        }
+    app.post("/add-service",verifyToken, async (req, res) => {
+      try {
+        const newService = req.body;
+        const result = await servicesCollection.insertOne(newService);
+        res.send(result);
+      } catch {
+        res.status(500).send("Something went wrong when add service");
+      }
     });
 
     // book a service
@@ -208,9 +233,22 @@ async function run() {
     });
 
     // update booking status
-    
-
-
+    app.patch("/update-booking-status/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const serviceStatus = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDocs = {
+          $set: {
+            service_status: serviceStatus.status,
+          },
+        };
+        const result = await bookingCollection.updateOne(filter, updatedDocs);
+        res.send(result);
+      } catch {
+        res.status(500).send("Something went wrong when update booking status");
+      }
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
