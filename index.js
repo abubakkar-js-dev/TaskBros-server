@@ -12,7 +12,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://taskbros12.web.app/",
+      "https://taskbros12.web.app",
        
     ], 
     credentials: true,
