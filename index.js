@@ -12,6 +12,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
+      "https://taskbros12.web.app/",
        
     ], 
     credentials: true,
@@ -22,9 +23,9 @@ app.use(cookieParser());
 
 // custom middleware for jwt verification
 const verifyToken = (req, res, next) => {
-  console.log(req.cookies);
+  // console.log(req.cookies);
   const token = req.cookies?.token;
-  console.log(token);
+  // console.log(token);
   if (!token) {
     return res.status(401).send("Unauthorized user");
   }
@@ -54,9 +55,9 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
