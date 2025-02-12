@@ -55,9 +55,9 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
+    await client.connect();
     // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
+    await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -103,17 +103,36 @@ async function run() {
       }
     });
 
+
     // get all services
     app.get("/all-services", async (req, res) => {
       try {
         const search = req.query.search;
+        const sort = req.query.sort || "";
+        // console.log(sort,"from line 112");
+
         let searchquery;
+       
         if (search) {
           searchquery = { name: { $regex: search, $options: "i" } };
         } else {
           searchquery = {};
         }
-        const result = await servicesCollection.find(searchquery).toArray();
+
+        let sortquery;
+
+        if(sort === 'asc'){
+          sortquery = {price: 1}
+          // console.log('accending order services');
+        }else if(sort ==='desc'){
+          sortquery = {price: -1};
+          // console.log('decending order sorting');
+        }else{
+          sortquery = {};
+          // console.log('Noting to sort');
+        }
+        // console.log(sortquery);
+        const result = await servicesCollection.find(searchquery).sort(sortquery).toArray();
         res.send(result);
       } catch (err) {
         res.status(500).send("Something went wrong when fetch all services");
